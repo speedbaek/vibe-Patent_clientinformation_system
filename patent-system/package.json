@@ -1,0 +1,21 @@
+{
+  "name": "patent-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "특허 출원 정보 수집 웹시스템",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd packages/backend && npm run dev",
+    "dev:frontend": "cd packages/frontend && npm run dev",
+    "build": "cd packages/backend && npm run build && cd ../frontend && npm run build",
+    "seed": "cd packages/backend && npm run seed",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.0"
+  }
+}
