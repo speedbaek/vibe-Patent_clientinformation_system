@@ -7,6 +7,7 @@ import {
 } from '../types/index.js';
 import FormField, { SelectField } from './FormField.js';
 import { formatPhone, formatRRN, formatBizNum, formatCorpRegNum } from '../utils/formatters.js';
+import { openAddressSearch } from '../utils/daumPostcode.js';
 
 interface PersonCardProps {
   applicant: Applicant;
@@ -38,7 +39,6 @@ export default function PersonCard({
 
   const prefix = `applicants.${index}`;
 
-  // 이 출원인에 에러가 있는지 확인 (헤더에 경고 표시용)
   const hasErrors = getFieldError
     ? [
         `${prefix}.nameKr`, `${prefix}.rrn`, `${prefix}.corpName`,
@@ -46,6 +46,20 @@ export default function PersonCard({
         `${prefix}.nameEn`,
       ].some(f => getFieldError(f))
     : false;
+
+  async function handleAddressSearch() {
+    try {
+      const addr = await openAddressSearch();
+      onUpdate({ address: { ...addr, detailAddr: applicant.address.detailAddr } });
+    } catch { /* 사용자가 닫은 경우 무시 */ }
+  }
+
+  async function handleMailAddressSearch() {
+    try {
+      const addr = await openAddressSearch();
+      onUpdate({ mailAddress: { ...addr, detailAddr: applicant.mailAddress.detailAddr } });
+    } catch { /* 사용자가 닫은 경우 무시 */ }
+  }
 
   return (
     <div className={`person-card ${hasErrors ? 'person-card-error' : ''}`}>
@@ -114,12 +128,6 @@ export default function PersonCard({
                   value={applicant.nationality}
                   onChange={(e) => onUpdate({ nationality: e.target.value })}
                   options={NATIONALITY_OPTIONS}
-                />
-                <FormField
-                  label="직업/직위"
-                  value={applicant.jobTitle}
-                  onChange={(e) => onUpdate({ jobTitle: e.target.value })}
-                  placeholder="직업 또는 직위"
                 />
               </div>
             </div>
@@ -209,7 +217,7 @@ export default function PersonCard({
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => alert('주소 검색 API 연동 예정')}
+                    onClick={handleAddressSearch}
                   >
                     주소검색
                   </button>
@@ -243,6 +251,33 @@ export default function PersonCard({
             {applicant.useMailAddress && (
               <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '8px' }}>
                 <h5 style={{ marginBottom: '8px' }}>우편물 수령 주소</h5>
+                <div className="field-row">
+                  <div className="field-group" style={{ flex: 1 }}>
+                    <label className="field-label">우편번호</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        className="field-input"
+                        value={applicant.mailAddress.zipcode}
+                        readOnly
+                        placeholder="우편번호"
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={handleMailAddressSearch}
+                      >
+                        주소검색
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <FormField
+                  label="도로명 주소"
+                  value={applicant.mailAddress.roadAddr}
+                  readOnly
+                  placeholder="주소 검색 시 자동 입력"
+                />
                 <FormField
                   label="상세 주소"
                   value={applicant.mailAddress.detailAddr}

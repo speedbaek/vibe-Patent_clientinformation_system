@@ -1,6 +1,7 @@
 import { useFormContext } from '../../context/FormContext.js';
 import FormField from '../../components/FormField.js';
-import { formatPhone } from '../../utils/formatters.js';
+import { formatPhone, formatRRN } from '../../utils/formatters.js';
+import { openAddressSearch } from '../../utils/daumPostcode.js';
 
 interface Props {
   getFieldError?: (field: string) => string | undefined;
@@ -54,9 +55,10 @@ export default function Step3Inventor({ getFieldError }: Props) {
                 )}
               </div>
               <div className="person-card-body">
-                <div className="field-row col3">
+                {/* 기본 정보 */}
+                <div className="field-row col2">
                   <FormField
-                    label="성명"
+                    label="성명 (국문)"
                     required
                     value={inventor.nameKr}
                     onChange={(e) => dispatch({
@@ -66,6 +68,32 @@ export default function Step3Inventor({ getFieldError }: Props) {
                     })}
                     placeholder="발명자 성명"
                     error={getFieldError?.(`inventors.${idx}.nameKr`)}
+                  />
+                  <FormField
+                    label="성명 (영문)"
+                    value={inventor.nameEn}
+                    onChange={(e) => dispatch({
+                      type: 'UPDATE_INVENTOR',
+                      id: inventor.id,
+                      data: { nameEn: e.target.value },
+                    })}
+                    placeholder="English Name"
+                  />
+                </div>
+
+                <div className="field-row col3">
+                  <FormField
+                    label="주민등록번호"
+                    required
+                    value={inventor.rrn}
+                    onChange={(e) => dispatch({
+                      type: 'UPDATE_INVENTOR',
+                      id: inventor.id,
+                      data: { rrn: formatRRN(e.target.value) },
+                    })}
+                    placeholder="123456-1234567"
+                    maxLength={14}
+                    error={getFieldError?.(`inventors.${idx}.rrn`)}
                   />
                   <FormField
                     label="전화번호"
@@ -90,6 +118,126 @@ export default function Step3Inventor({ getFieldError }: Props) {
                     })}
                     placeholder="email@example.com"
                   />
+                </div>
+
+                {/* 주소 */}
+                <div className="field-section" style={{ marginTop: '16px' }}>
+                  <h4 className="section-subtitle">주소</h4>
+                  <div className="field-row">
+                    <div className="field-group" style={{ flex: 1 }}>
+                      <label className="field-label">우편번호</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          className="field-input"
+                          value={inventor.address.zipcode}
+                          readOnly
+                          placeholder="우편번호"
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={async () => {
+                          try {
+                            const addr = await openAddressSearch();
+                            dispatch({
+                              type: 'UPDATE_INVENTOR',
+                              id: inventor.id,
+                              data: { address: { ...addr, detailAddr: inventor.address.detailAddr } },
+                            });
+                          } catch { /* 닫기 */ }
+                        }}
+                        >
+                          주소검색
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <FormField
+                    label="도로명 주소"
+                    value={inventor.address.roadAddr}
+                    readOnly
+                    placeholder="주소 검색 시 자동 입력"
+                  />
+                  <FormField
+                    label="상세 주소"
+                    value={inventor.address.detailAddr}
+                    onChange={(e) => dispatch({
+                      type: 'UPDATE_INVENTOR',
+                      id: inventor.id,
+                      data: {
+                        address: { ...inventor.address, detailAddr: e.target.value },
+                      },
+                    })}
+                    placeholder="동/호수 등 상세 주소"
+                  />
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '12px 0' }}>
+                    <input
+                      type="checkbox"
+                      checked={!inventor.useMailAddress}
+                      onChange={(e) => dispatch({
+                        type: 'UPDATE_INVENTOR',
+                        id: inventor.id,
+                        data: { useMailAddress: !e.target.checked },
+                      })}
+                    />
+                    우편물 수령지 동일
+                  </label>
+
+                  {inventor.useMailAddress && (
+                    <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '8px' }}>
+                      <h5 style={{ marginBottom: '8px' }}>우편물 수령 주소</h5>
+                      <div className="field-row">
+                        <div className="field-group" style={{ flex: 1 }}>
+                          <label className="field-label">우편번호</label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input
+                              className="field-input"
+                              value={inventor.mailAddress.zipcode}
+                              readOnly
+                              placeholder="우편번호"
+                              style={{ flex: 1 }}
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              onClick={async () => {
+                                try {
+                                  const addr = await openAddressSearch();
+                                  dispatch({
+                                    type: 'UPDATE_INVENTOR',
+                                    id: inventor.id,
+                                    data: { mailAddress: { ...addr, detailAddr: inventor.mailAddress.detailAddr } },
+                                  });
+                                } catch { /* 닫기 */ }
+                              }}
+                            >
+                              주소검색
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <FormField
+                        label="도로명 주소"
+                        value={inventor.mailAddress.roadAddr}
+                        readOnly
+                        placeholder="주소 검색 시 자동 입력"
+                      />
+                      <FormField
+                        label="상세 주소"
+                        value={inventor.mailAddress.detailAddr}
+                        onChange={(e) => dispatch({
+                          type: 'UPDATE_INVENTOR',
+                          id: inventor.id,
+                          data: {
+                            mailAddress: { ...inventor.mailAddress, detailAddr: e.target.value },
+                          },
+                        })}
+                        placeholder="우편물 수령 주소"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

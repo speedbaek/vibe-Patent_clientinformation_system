@@ -8,41 +8,17 @@ const apiClient = axios.create({
   },
 });
 
-// 토큰을 요청에 자동 추가
-let currentToken = '';
+// ── 세션 ID (파일 업로드 → 제출 연결용) ──
+let sessionId = '';
 
-export function setToken(token: string) {
-  currentToken = token;
-}
-
-apiClient.interceptors.request.use((config) => {
-  if (currentToken) {
-    config.headers.Authorization = `Bearer ${currentToken}`;
-    // 쿼리 파라미터에도 추가 (GET 요청용)
-    if (config.method === 'get') {
-      config.params = { ...config.params, token: currentToken };
-    }
+export function getSessionId(): string {
+  if (!sessionId) {
+    sessionId = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
-  return config;
-});
+  return sessionId;
+}
 
 // ── API 함수 ──
-
-export async function verifyToken(token: string) {
-  const { data } = await apiClient.get('/customer/verify-token', {
-    params: { token },
-  });
-  return data;
-}
-
-export async function saveDraft(formData: Record<string, unknown>, currentStep: number) {
-  const { data } = await apiClient.post('/customer/save-draft', {
-    token: currentToken,
-    formData,
-    currentStep,
-  });
-  return data;
-}
 
 export async function uploadFile(
   file: File,
@@ -51,9 +27,9 @@ export async function uploadFile(
 ) {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('sessionId', getSessionId());
   formData.append('applicantIndex', applicantIndex.toString());
   formData.append('fileType', fileType);
-  formData.append('token', currentToken);
 
   const { data } = await apiClient.post('/customer/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -64,8 +40,8 @@ export async function uploadFile(
 export async function uploadSignature(blob: Blob, applicantIndex: number) {
   const formData = new FormData();
   formData.append('signature', blob, 'signature.png');
+  formData.append('sessionId', getSessionId());
   formData.append('applicantIndex', applicantIndex.toString());
-  formData.append('token', currentToken);
 
   const { data } = await apiClient.post('/customer/upload-signature', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -75,8 +51,41 @@ export async function uploadSignature(blob: Blob, applicantIndex: number) {
 
 export async function submitForm(payload: Record<string, unknown>) {
   const { data } = await apiClient.post('/customer/submit', {
-    token: currentToken,
+    sessionId: getSessionId(),
     ...payload,
+  });
+  return data;
+}
+
+// ── 추가제출 API ──
+
+export async function verifySubmission(
+  caseNumber: string,
+  contactName: string,
+  contactEmail: string,
+) {
+  const { data } = await apiClient.post('/additional/verify', {
+    caseNumber,
+    contactName,
+    contactEmail,
+  });
+  return data;
+}
+
+export async function uploadAdditionalFile(
+  file: File,
+  submissionId: number,
+  applicantIndex: number,
+  fileType: string,
+) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('submissionId', submissionId.toString());
+  formData.append('applicantIndex', applicantIndex.toString());
+  formData.append('fileType', fileType);
+
+  const { data } = await apiClient.post('/additional/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data;
 }

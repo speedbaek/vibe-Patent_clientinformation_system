@@ -8,10 +8,7 @@ export type PersonType =
   | 'association';
 
 // ── 출원 유형 ──
-export type ApplicationType = 'patent' | 'utility' | 'trademark' | 'design' | 'pct';
-
-// ── 접수 상태 ──
-export type SubmissionStatus = 'draft' | 'submitted' | 'reviewing' | 'complete' | 'rejected';
+export type ApplicationType = 'patent' | 'trademark' | 'design' | 'pct';
 
 // ── 주소 ──
 export interface Address {
@@ -30,24 +27,23 @@ export interface UploadedDocument {
 
 // ── 출원인 ──
 export interface Applicant {
-  id: string;                    // 클라이언트 임시 ID
+  id: string;
   personType: PersonType;
 
   // 개인
   nameKr: string;
-  rrn: string;                   // 평문 (서버 전송 시 암호화)
+  rrn: string;
   nationality: string;
-  jobTitle: string;
 
   // 법인
   corpName: string;
-  corpRegNum: string;            // 평문
-  bizNum: string;                // 평문
+  corpRegNum: string;
+  bizNum: string;
   ceoName: string;
 
   // 외국인
   nameEn: string;
-  passport: string;              // 평문
+  passport: string;
 
   // 주소
   address: Address;
@@ -59,7 +55,7 @@ export interface Applicant {
   email: string;
 
   // 서명 & 문서
-  signatureDataUrl: string;      // Canvas toDataURL
+  signatureDataUrl: string;
   documents: UploadedDocument[];
 }
 
@@ -67,8 +63,13 @@ export interface Applicant {
 export interface Inventor {
   id: string;
   nameKr: string;
+  nameEn: string;
+  rrn: string;
   phone: string;
   email: string;
+  address: Address;
+  mailAddress: Address;
+  useMailAddress: boolean;
 }
 
 // ── 연락처 ──
@@ -80,14 +81,10 @@ export interface ContactPerson {
 
 // ── 폼 전체 상태 ──
 export interface FormState {
-  // 메타
-  token: string;
-  caseNumber: string;
-  status: SubmissionStatus;
-
   // 개인정보 동의
   privacyConsented: boolean;
   privacyConsentedAt: string | null;
+  newsletterConsent: boolean;
 
   // Step 1
   applicationType: ApplicationType;
@@ -105,12 +102,11 @@ export interface FormState {
 }
 
 // ── 발명자가 필요한 출원 유형 ──
-export const NEED_INVENTOR: ApplicationType[] = ['patent', 'utility', 'pct'];
+export const NEED_INVENTOR: ApplicationType[] = ['patent', 'pct'];
 
 // ── 출원 유형 라벨 ──
 export const APPLICATION_TYPE_LABELS: Record<ApplicationType, string> = {
-  patent: '특허',
-  utility: '실용신안',
+  patent: '특허/실용신안',
   trademark: '상표',
   design: '디자인',
   pct: 'PCT 국제출원',
@@ -143,7 +139,7 @@ export function createEmptyApplicant(id?: string): Applicant {
   return {
     id: id || `ap-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     personType: 'domestic_individual',
-    nameKr: '', rrn: '', nationality: 'KR', jobTitle: '',
+    nameKr: '', rrn: '', nationality: 'KR',
     corpName: '', corpRegNum: '', bizNum: '', ceoName: '',
     nameEn: '', passport: '',
     address: { zipcode: '', roadAddr: '', detailAddr: '' },
@@ -159,6 +155,10 @@ export function createEmptyApplicant(id?: string): Applicant {
 export function createEmptyInventor(id?: string): Inventor {
   return {
     id: id || `inv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    nameKr: '', phone: '', email: '',
+    nameKr: '', nameEn: '', rrn: '',
+    phone: '', email: '',
+    address: { zipcode: '', roadAddr: '', detailAddr: '' },
+    mailAddress: { zipcode: '', roadAddr: '', detailAddr: '' },
+    useMailAddress: false,
   };
 }

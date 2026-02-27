@@ -374,6 +374,11 @@ body {
   border-color: var(--blue);
   background: var(--blue-light);
 }
+.file-upload-area.drag-over {
+  border-color: var(--blue);
+  border-style: solid;
+  background: var(--blue-light);
+}
 .file-item {
   display: flex;
   align-items: center;

@@ -3,9 +3,10 @@ import { APPLICATION_TYPE_LABELS } from '../../types/index.js';
 
 interface Step5Props {
   submittedAt?: string;
+  caseNumber?: string;
 }
 
-export default function Step5Complete({ submittedAt }: Step5Props) {
+export default function Step5Complete({ submittedAt, caseNumber }: Step5Props) {
   const { state } = useFormContext();
 
   const now = submittedAt ? new Date(submittedAt) : new Date();
@@ -29,7 +30,7 @@ export default function Step5Complete({ submittedAt }: Step5Props) {
           <div className="receipt-box">
             <div className="receipt-row">
               <span className="receipt-label">접수번호</span>
-              <span className="receipt-value">{state.caseNumber}</span>
+              <span className="receipt-value">{caseNumber || '-'}</span>
             </div>
             <div className="receipt-row">
               <span className="receipt-label">출원유형</span>
@@ -63,6 +64,20 @@ export default function Step5Complete({ submittedAt }: Step5Props) {
               추가 서류가 필요한 경우 <strong>{deadlineStr}</strong>까지 제출해 주시기 바랍니다.
               문의사항은 관리팀에 연락해 주세요.
             </p>
+          </div>
+
+          <div className="info-box orange" style={{ marginTop: '16px', textAlign: 'left' }}>
+            <strong>미제출 서류가 있으신가요?</strong>
+            <p>
+              서명, 사업자등록증, 인감 등 미제출 서류는 접수번호(<strong>{caseNumber}</strong>)를
+              이용하여 언제든 추가 제출할 수 있습니다.
+            </p>
+            <a
+              href={`/upload-additional?case=${encodeURIComponent(caseNumber || '')}`}
+              style={{ color: '#bf360c', fontWeight: 600 }}
+            >
+              첨부서류 추가제출하기 →
+            </a>
           </div>
         </div>
       </div>

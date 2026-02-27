@@ -117,23 +117,10 @@ export function validateStep3(state: FormState): ValidationError[] {
 }
 
 /**
- * Step 4 검증: 서류/서명 (경고 수준 — 필수 아님)
+ * Step 4 검증: 서류/서명 — 필수 아님 (추후 제출 가능)
  */
-export function validateStep4(state: FormState): ValidationError[] {
-  const errors: ValidationError[] = [];
-
-  state.applicants.forEach((ap, idx) => {
-    const isIndividual = ap.personType === 'domestic_individual' || ap.personType === 'foreign_individual';
-
-    if (isIndividual && !ap.signatureDataUrl) {
-      errors.push({
-        field: `applicants.${idx}.signature`,
-        message: `출원인 ${idx + 1} (${ap.nameKr || '미입력'}): 서명이 없습니다. 서명을 해주세요.`,
-      });
-    }
-  });
-
-  return errors;
+export function validateStep4(_state: FormState): ValidationError[] {
+  return [];
 }
 
 /**

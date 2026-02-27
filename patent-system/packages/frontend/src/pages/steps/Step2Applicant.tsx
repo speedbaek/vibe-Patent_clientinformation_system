@@ -27,6 +27,30 @@ export default function Step2Applicant({ getFieldError }: Props) {
             출원인 유형에 따라 입력 항목이 달라집니다.
           </div>
 
+          {state.contactPerson.name && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ marginBottom: '16px', width: '100%' }}
+              onClick={() => {
+                const first = state.applicants[0];
+                if (first) {
+                  dispatch({
+                    type: 'UPDATE_APPLICANT',
+                    id: first.id,
+                    data: {
+                      nameKr: state.contactPerson.name,
+                      phone: state.contactPerson.phone,
+                      email: state.contactPerson.email,
+                    },
+                  });
+                }
+              }}
+            >
+              담당자 정보 불러오기 ({state.contactPerson.name})
+            </button>
+          )}
+
           {state.applicants.map((applicant, idx) => (
             <PersonCard
               key={applicant.id}

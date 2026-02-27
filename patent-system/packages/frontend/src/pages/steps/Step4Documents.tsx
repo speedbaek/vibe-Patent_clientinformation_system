@@ -11,6 +11,14 @@ export default function Step4Documents({ getFieldError }: Props) {
 
   return (
     <div className="step-content">
+      <div className="info-box blue" style={{ marginBottom: '20px' }}>
+        <strong>서류 안내</strong>
+        <p>
+          서류가 준비되지 않은 경우, 지금 제출하지 않아도 됩니다.<br />
+          접수 완료 후 <strong>접수번호</strong>를 이용하여 추가 서류를 제출할 수 있습니다.
+        </p>
+      </div>
+
       {state.applicants.map((applicant, idx) => {
         const isIndividual =
           applicant.personType === 'domestic_individual' ||
@@ -80,7 +88,7 @@ export default function Step4Documents({ getFieldError }: Props) {
               {isCorp && (
                 <>
                   <FileUpload
-                    label="사업자등록증 사본 (필수)"
+                    label="사업자등록증 사본 (권장)"
                     fileType="biz_reg"
                     applicantIndex={idx}
                     documents={applicant.documents}
@@ -97,7 +105,7 @@ export default function Step4Documents({ getFieldError }: Props) {
 
                   <div style={{ marginTop: '16px' }}>
                     <FileUpload
-                      label="법인인감 날인 스캔 (필수)"
+                      label="법인인감 날인 스캔 (권장)"
                       fileType="corp_seal"
                       applicantIndex={idx}
                       documents={applicant.documents}

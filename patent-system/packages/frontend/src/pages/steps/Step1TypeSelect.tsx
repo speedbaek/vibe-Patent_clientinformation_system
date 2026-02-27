@@ -14,8 +14,7 @@ export default function Step1TypeSelect({ getFieldError }: Props) {
   const { state, dispatch } = useFormContext();
 
   const appTypes: { type: ApplicationType; desc: string }[] = [
-    { type: 'patent', desc: '발명에 대한 특허 출원' },
-    { type: 'utility', desc: '고안에 대한 실용신안 출원' },
+    { type: 'patent', desc: '발명/고안에 대한 특허·실용신안 출원' },
     { type: 'trademark', desc: '상표 등록 출원' },
     { type: 'design', desc: '디자인 등록 출원' },
     { type: 'pct', desc: 'PCT 국제 특허 출원' },

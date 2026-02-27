@@ -10,6 +10,8 @@ interface FileUploadProps {
   documents: UploadedDocument[];
   onFileUploaded: (doc: UploadedDocument) => void;
   accept?: string;
+  /** 커스텀 업로드 함수 (미제공 시 기본 uploadFile 사용) */
+  onUpload?: (file: File) => Promise<{ success: boolean; data: UploadedDocument }>;
 }
 
 export default function FileUpload({
@@ -19,17 +21,15 @@ export default function FileUpload({
   documents,
   onFileUploaded,
   accept = '.jpg,.jpeg,.png,.pdf',
+  onUpload,
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
 
-  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // 클라이언트 사이드 검증
-    const maxSize = 10 * 1024 * 1024; // 10MB
+  async function processFile(file: File) {
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       setError('파일 크기가 10MB를 초과합니다.');
       return;
@@ -45,7 +45,9 @@ export default function FileUpload({
     setUploading(true);
 
     try {
-      const result = await uploadFile(file, applicantIndex, fileType);
+      const result = onUpload
+        ? await onUpload(file)
+        : await uploadFile(file, applicantIndex, fileType);
       if (result.success) {
         onFileUploaded(result.data);
       }
@@ -53,8 +55,35 @@ export default function FileUpload({
       setError(err?.response?.data?.error || '파일 업로드에 실패했습니다.');
     } finally {
       setUploading(false);
-      if (inputRef.current) inputRef.current.value = '';
     }
+  }
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+    if (inputRef.current) inputRef.current.value = '';
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }
+
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    await processFile(file);
   }
 
   return (
@@ -62,8 +91,11 @@ export default function FileUpload({
       <label className="field-label">{label}</label>
 
       <div
-        className="file-upload-area"
+        className={`file-upload-area ${dragOver ? 'drag-over' : ''}`}
         onClick={() => inputRef.current?.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         style={{ cursor: uploading ? 'wait' : 'pointer' }}
       >
         <input
@@ -76,8 +108,10 @@ export default function FileUpload({
         />
         {uploading ? (
           <p>업로드 중...</p>
+        ) : dragOver ? (
+          <p style={{ color: '#1a5fb4', fontWeight: 600 }}>여기에 파일을 놓으세요</p>
         ) : (
-          <p>클릭하여 파일 선택 (JPG, PNG, PDF / 최대 10MB)</p>
+          <p>파일을 드래그하거나 클릭하여 선택 (JPG, PNG, PDF / 최대 10MB)</p>
         )}
       </div>
 

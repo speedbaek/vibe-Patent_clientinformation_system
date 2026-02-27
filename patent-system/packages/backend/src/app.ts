@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import customerRoutes from './routes/customer.js';
+import adminRoutes from './routes/admin.js';
+import additionalRoutes from './routes/additional.js';
 
 const app = express();
 
@@ -23,9 +25,8 @@ app.get('/api/health', (_req, res) => {
 
 // ── 라우트 ──
 app.use('/api/customer', customerRoutes);
-
-// Phase 2: 관리자 라우트
-// app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/additional', additionalRoutes);
 
 // ── 에러 핸들러 ──
 app.use(errorHandler);

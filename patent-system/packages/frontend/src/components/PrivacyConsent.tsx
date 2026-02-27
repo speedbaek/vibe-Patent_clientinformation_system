@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useFormContext } from '../context/FormContext.js';
 
 export default function PrivacyConsent() {
-  const { dispatch } = useFormContext();
+  const { state, dispatch } = useFormContext();
   const [checked, setChecked] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -19,7 +19,7 @@ export default function PrivacyConsent() {
         </div>
         <div className="card-body">
           <p style={{ marginBottom: '16px', color: '#555', lineHeight: 1.7 }}>
-            특허 출원에 필요한 출원인 정보를 수집합니다. 아래 내용을 확인하시고 동의해 주세요.
+            지식재산권 출원에 필요한 출원인 정보를 수집합니다. 아래 내용을 확인하시고 동의해 주세요.
           </p>
 
           <div className="info-box blue">
@@ -63,6 +63,19 @@ export default function PrivacyConsent() {
                 >
                   [개인정보처리방침 전문 보기]
                 </button>
+              </span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e0e0e0' }}>
+              <input
+                type="checkbox"
+                checked={state.newsletterConsent}
+                onChange={(e) => dispatch({ type: 'SET_NEWSLETTER_CONSENT', agreed: e.target.checked })}
+                style={{ width: '18px', height: '18px' }}
+              />
+              <span style={{ fontSize: '14px', color: '#666' }}>
+                <span style={{ color: '#1a5fb4', fontWeight: 600, marginRight: '4px' }}>[선택]</span>
+                지식재산권 관련 뉴스레터 수신에 동의합니다.
               </span>
             </label>
           </div>
