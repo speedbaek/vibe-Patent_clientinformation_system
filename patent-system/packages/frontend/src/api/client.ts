@@ -60,13 +60,11 @@ export async function submitForm(payload: Record<string, unknown>) {
 // ── 추가제출 API ──
 
 export async function verifySubmission(
-  caseNumber: string,
-  contactName: string,
+  contactPhone: string,
   contactEmail: string,
 ) {
   const { data } = await apiClient.post('/additional/verify', {
-    caseNumber,
-    contactName,
+    contactPhone,
     contactEmail,
   });
   return data;

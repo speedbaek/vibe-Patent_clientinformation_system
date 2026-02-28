@@ -27,7 +27,7 @@ export default function Step2Applicant({ getFieldError }: Props) {
             출원인 유형에 따라 입력 항목이 달라집니다.
           </div>
 
-          {state.contactPerson.name && (
+          {state.contactPersons[0]?.name && (
             <button
               type="button"
               className="btn btn-secondary"
@@ -39,15 +39,13 @@ export default function Step2Applicant({ getFieldError }: Props) {
                     type: 'UPDATE_APPLICANT',
                     id: first.id,
                     data: {
-                      nameKr: state.contactPerson.name,
-                      phone: state.contactPerson.phone,
-                      email: state.contactPerson.email,
+                      nameKr: state.contactPersons[0].name,
                     },
                   });
                 }
               }}
             >
-              담당자 정보 불러오기 ({state.contactPerson.name})
+              담당자 정보 불러오기 ({state.contactPersons[0].name})
             </button>
           )}
 

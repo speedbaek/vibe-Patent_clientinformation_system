@@ -5,8 +5,16 @@ import {
   PERSON_TYPE_LABELS,
   NATIONALITY_OPTIONS,
 } from '../types/index.js';
+
+const OTHER_TYPES: PersonType[] = ['govt', 'foreign_corp', 'foreign_individual', 'association'];
+const OTHER_OPTIONS: { value: PersonType; label: string }[] = [
+  { value: 'govt', label: '국가/지방자치단체' },
+  { value: 'foreign_corp', label: '외국 법인' },
+  { value: 'foreign_individual', label: '외국 자연인 (개인)' },
+  { value: 'association', label: '사단/재단법인' },
+];
 import FormField, { SelectField } from './FormField.js';
-import { formatPhone, formatRRN, formatBizNum, formatCorpRegNum } from '../utils/formatters.js';
+import { formatRRN, formatBizNum, formatCorpRegNum } from '../utils/formatters.js';
 import { openAddressSearch } from '../utils/daumPostcode.js';
 
 interface PersonCardProps {
@@ -43,9 +51,28 @@ export default function PersonCard({
     ? [
         `${prefix}.nameKr`, `${prefix}.rrn`, `${prefix}.corpName`,
         `${prefix}.ceoName`, `${prefix}.corpRegNum`, `${prefix}.bizNum`,
-        `${prefix}.nameEn`,
+        `${prefix}.nameEn`, `${prefix}.bizLicense`,
       ].some(f => getFieldError(f))
     : false;
+
+  function handleBizLicenseUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('파일 크기는 10MB 이하만 가능합니다.');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      onUpdate({
+        bizLicenseDataUrl: reader.result as string,
+        bizLicenseFileName: file.name,
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
 
   async function handleAddressSearch() {
     try {
@@ -88,16 +115,51 @@ export default function PersonCard({
       {!collapsed && (
         <div className="person-card-body">
           {/* 출원인 유형 선택 */}
-          <div className="type-grid">
-            {(Object.entries(PERSON_TYPE_LABELS) as [PersonType, string][]).map(([type, label]) => (
-              <div
-                key={type}
-                className={`type-item ${personType === type ? 'selected' : ''}`}
-                onClick={() => onUpdate({ personType: type })}
+          <div className="type-grid type-grid-3">
+            <div
+              className={`type-item ${personType === 'domestic_individual' ? 'selected' : ''}`}
+              onClick={() => onUpdate({ personType: 'domestic_individual' })}
+            >
+              국내 자연인(개인)
+            </div>
+            <div
+              className={`type-item ${personType === 'domestic_corp' ? 'selected' : ''}`}
+              onClick={() => onUpdate({ personType: 'domestic_corp' })}
+            >
+              국내 법인
+            </div>
+            <div
+              className={`type-item type-item-select ${OTHER_TYPES.includes(personType) ? 'selected' : ''}`}
+              style={{ position: 'relative', overflow: 'hidden' }}
+            >
+              <span style={{ pointerEvents: 'none' }}>
+                {OTHER_TYPES.includes(personType)
+                  ? (OTHER_OPTIONS.find((o) => o.value === personType)?.label ?? '기타')
+                  : '기타 ▾'}
+              </span>
+              <select
+                value={OTHER_TYPES.includes(personType) ? personType : ''}
+                onChange={(e) => onUpdate({ personType: e.target.value as PersonType })}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  opacity: 0,
+                  cursor: 'pointer',
+                  width: '100%',
+                  height: '100%',
+                }}
               >
-                {label}
-              </div>
-            ))}
+                <option value="" disabled />
+                {OTHER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.6', marginTop: '6px' }}>
+            <div>※ 개인사업자는 "개인"을 선택하셔서 인적사항 작성 바랍니다.</div>
+            <div>※ 법인사업자의 경우 "사업자등록증" 첨부가 필수로 요구되니, 미리 준비 부탁 드립니다.</div>
           </div>
 
           {/* 개인 필드 */}
@@ -119,17 +181,33 @@ export default function PersonCard({
                   onChange={(e) => onUpdate({ rrn: formatRRN(e.target.value) })}
                   placeholder="123456-1234567"
                   maxLength={14}
+                  inputMode="numeric"
                   error={getFieldError?.(`${prefix}.rrn`)}
                 />
               </div>
-              <div className="field-row col2">
-                <SelectField
-                  label="국적"
-                  value={applicant.nationality}
-                  onChange={(e) => onUpdate({ nationality: e.target.value })}
-                  options={NATIONALITY_OPTIONS}
-                />
-              </div>
+              {personType === 'domestic_individual' && (
+                <div className="field-row col2">
+                  <FormField
+                    label="영문 성명"
+                    required
+                    value={applicant.nameEn}
+                    onChange={(e) => onUpdate({ nameEn: e.target.value })}
+                    placeholder="English Name"
+                    helpText="예시) Hong, Gil Dong"
+                    error={getFieldError?.(`${prefix}.nameEn`)}
+                  />
+                </div>
+              )}
+              {personType === 'foreign_individual' && (
+                <div className="field-row col2">
+                  <SelectField
+                    label="국적"
+                    value={applicant.nationality}
+                    onChange={(e) => onUpdate({ nationality: e.target.value })}
+                    options={NATIONALITY_OPTIONS}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -162,6 +240,7 @@ export default function PersonCard({
                   onChange={(e) => onUpdate({ corpRegNum: formatCorpRegNum(e.target.value) })}
                   placeholder="123456-1234567"
                   maxLength={14}
+                  inputMode="numeric"
                   error={getFieldError?.(`${prefix}.corpRegNum`)}
                 />
                 <FormField
@@ -171,9 +250,66 @@ export default function PersonCard({
                   onChange={(e) => onUpdate({ bizNum: formatBizNum(e.target.value) })}
                   placeholder="123-45-67890"
                   maxLength={12}
+                  inputMode="numeric"
                   error={getFieldError?.(`${prefix}.bizNum`)}
                 />
               </div>
+              {personType === 'domestic_corp' && (
+                <div className="field-row col2">
+                  <FormField
+                    label="영문 명칭"
+                    required
+                    value={applicant.nameEn}
+                    onChange={(e) => onUpdate({ nameEn: e.target.value })}
+                    placeholder="English Corporation Name"
+                    helpText="예시) Teheran IP Law Firm"
+                    error={getFieldError?.(`${prefix}.nameEn`)}
+                  />
+                </div>
+              )}
+              {personType === 'domestic_corp' && (
+                <div style={{ marginTop: '8px' }}>
+                  <label className="field-label">
+                    사업자등록증 <span className="required">*</span>
+                  </label>
+                  {applicant.bizLicenseFileName ? (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '10px 14px', background: '#f0f7ff', borderRadius: '8px',
+                      border: '1px solid #d0e0f0', fontSize: '13px',
+                    }}>
+                      <span style={{ flex: 1 }}>📄 {applicant.bizLicenseFileName}</span>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => onUpdate({ bizLicenseDataUrl: '', bizLicenseFileName: '' })}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <label
+                        className="btn btn-secondary"
+                        style={{ display: 'inline-flex', cursor: 'pointer', fontSize: '13px' }}
+                      >
+                        파일 선택 (이미지/PDF)
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={handleBizLicenseUpload}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                      {getFieldError?.(`${prefix}.bizLicense`) && (
+                        <div className="field-error" style={{ marginTop: '6px' }}>
+                          {getFieldError(`${prefix}.bizLicense`)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -187,6 +323,7 @@ export default function PersonCard({
                   value={applicant.nameEn}
                   onChange={(e) => onUpdate({ nameEn: e.target.value })}
                   placeholder="English Name"
+                  helpText="예시) Hong, Gil Dong"
                   error={getFieldError?.(`${prefix}.nameEn`)}
                 />
                 <FormField
@@ -202,7 +339,9 @@ export default function PersonCard({
 
           {/* 주소 (공통) */}
           <div className="field-section">
-            <h4 className="section-subtitle">주소</h4>
+            <h4 className="section-subtitle">
+              주소 <span style={{ fontSize: '12px', fontWeight: 400, color: '#e67700' }}>※ 주민등록등본상 주소지를 입력해 주세요</span>
+            </h4>
             <div className="field-row">
               <div className="field-group" style={{ flex: 1 }}>
                 <label className="field-label">우편번호</label>
@@ -211,6 +350,7 @@ export default function PersonCard({
                     className="field-input"
                     value={applicant.address.zipcode}
                     readOnly
+                    inputMode="numeric"
                     placeholder="우편번호"
                     style={{ flex: 1 }}
                   />
@@ -218,6 +358,7 @@ export default function PersonCard({
                     type="button"
                     className="btn btn-secondary"
                     onClick={handleAddressSearch}
+                    style={{ whiteSpace: 'nowrap' }}
                   >
                     주소검색
                   </button>
@@ -242,13 +383,13 @@ export default function PersonCard({
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '12px 0' }}>
               <input
                 type="checkbox"
-                checked={!applicant.useMailAddress}
-                onChange={(e) => onUpdate({ useMailAddress: !e.target.checked })}
+                checked={applicant.useMailAddress}
+                onChange={(e) => onUpdate({ useMailAddress: e.target.checked })}
               />
               우편물 수령지 동일
             </label>
 
-            {applicant.useMailAddress && (
+            {!applicant.useMailAddress && (
               <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '8px' }}>
                 <h5 style={{ marginBottom: '8px' }}>우편물 수령 주소</h5>
                 <div className="field-row">
@@ -259,6 +400,7 @@ export default function PersonCard({
                         className="field-input"
                         value={applicant.mailAddress.zipcode}
                         readOnly
+                        inputMode="numeric"
                         placeholder="우편번호"
                         style={{ flex: 1 }}
                       />
@@ -266,6 +408,7 @@ export default function PersonCard({
                         type="button"
                         className="btn btn-secondary"
                         onClick={handleMailAddressSearch}
+                        style={{ whiteSpace: 'nowrap' }}
                       >
                         주소검색
                       </button>
@@ -290,27 +433,6 @@ export default function PersonCard({
             )}
           </div>
 
-          {/* 연락처 (공통) */}
-          <div className="field-section">
-            <h4 className="section-subtitle">연락처</h4>
-            <div className="field-row col2">
-              <FormField
-                label="전화번호"
-                type="tel"
-                value={applicant.phone}
-                onChange={(e) => onUpdate({ phone: formatPhone(e.target.value) })}
-                placeholder="010-1234-5678"
-                maxLength={13}
-              />
-              <FormField
-                label="이메일"
-                type="email"
-                value={applicant.email}
-                onChange={(e) => onUpdate({ email: e.target.value })}
-                placeholder="email@example.com"
-              />
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -72,6 +72,11 @@ export async function initDatabase(): Promise<void> {
     db.run('ALTER TABLE submissions ADD COLUMN newsletter_consent INTEGER NOT NULL DEFAULT 0');
   } catch { /* 이미 존재하면 무시 */ }
 
+  // 복수 담당자 지원을 위한 contacts_json 컬럼 추가
+  try {
+    db.run("ALTER TABLE submissions ADD COLUMN contacts_json TEXT NOT NULL DEFAULT '[]'");
+  } catch { /* 이미 존재하면 무시 */ }
+
   db.run(`
     CREATE TABLE IF NOT EXISTS uploaded_files (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -34,7 +34,7 @@ export default function Step3Inventor({ getFieldError }: Props) {
         </div>
         <div className="card-body">
           <div className="info-box blue" style={{ marginBottom: '16px' }}>
-            발명자는 자연인(개인)만 가능합니다. 출원인이 개인인 경우 "출원인에서 복사" 버튼으로 간편하게 입력할 수 있습니다.
+            발명자는 자연인(개인)만 가능합니다. 발명자와 출원인이 동일한 경우 "출원인에서 복사" 버튼으로 간편하게 입력할 수 있습니다.
           </div>
 
           {state.inventors.map((inventor, idx) => (
@@ -78,6 +78,7 @@ export default function Step3Inventor({ getFieldError }: Props) {
                       data: { nameEn: e.target.value },
                     })}
                     placeholder="English Name"
+                    helpText="예시) Hong, Gil Dong"
                   />
                 </div>
 
@@ -93,11 +94,13 @@ export default function Step3Inventor({ getFieldError }: Props) {
                     })}
                     placeholder="123456-1234567"
                     maxLength={14}
+                    inputMode="numeric"
                     error={getFieldError?.(`inventors.${idx}.rrn`)}
                   />
                   <FormField
                     label="전화번호"
                     type="tel"
+                    inputMode="tel"
                     value={inventor.phone}
                     onChange={(e) => dispatch({
                       type: 'UPDATE_INVENTOR',
@@ -106,10 +109,12 @@ export default function Step3Inventor({ getFieldError }: Props) {
                     })}
                     placeholder="010-1234-5678"
                     maxLength={13}
+                    autoComplete="tel"
                   />
                   <FormField
                     label="이메일"
                     type="email"
+                    inputMode="email"
                     value={inventor.email}
                     onChange={(e) => dispatch({
                       type: 'UPDATE_INVENTOR',
@@ -117,12 +122,15 @@ export default function Step3Inventor({ getFieldError }: Props) {
                       data: { email: e.target.value },
                     })}
                     placeholder="email@example.com"
+                    autoComplete="email"
                   />
                 </div>
 
                 {/* 주소 */}
                 <div className="field-section" style={{ marginTop: '16px' }}>
-                  <h4 className="section-subtitle">주소</h4>
+                  <h4 className="section-subtitle">
+                    주소 <span style={{ fontSize: '12px', fontWeight: 400, color: '#e67700' }}>※ 주민등록등본상 주소지를 입력해 주세요</span>
+                  </h4>
                   <div className="field-row">
                     <div className="field-group" style={{ flex: 1 }}>
                       <label className="field-label">우편번호</label>
@@ -131,12 +139,14 @@ export default function Step3Inventor({ getFieldError }: Props) {
                           className="field-input"
                           value={inventor.address.zipcode}
                           readOnly
+                          inputMode="numeric"
                           placeholder="우편번호"
                           style={{ flex: 1 }}
                         />
                         <button
                           type="button"
                           className="btn btn-secondary"
+                          style={{ whiteSpace: 'nowrap' }}
                           onClick={async () => {
                           try {
                             const addr = await openAddressSearch();
@@ -175,17 +185,17 @@ export default function Step3Inventor({ getFieldError }: Props) {
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '12px 0' }}>
                     <input
                       type="checkbox"
-                      checked={!inventor.useMailAddress}
+                      checked={inventor.useMailAddress}
                       onChange={(e) => dispatch({
                         type: 'UPDATE_INVENTOR',
                         id: inventor.id,
-                        data: { useMailAddress: !e.target.checked },
+                        data: { useMailAddress: e.target.checked },
                       })}
                     />
                     우편물 수령지 동일
                   </label>
 
-                  {inventor.useMailAddress && (
+                  {!inventor.useMailAddress && (
                     <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '8px' }}>
                       <h5 style={{ marginBottom: '8px' }}>우편물 수령 주소</h5>
                       <div className="field-row">
@@ -196,12 +206,14 @@ export default function Step3Inventor({ getFieldError }: Props) {
                               className="field-input"
                               value={inventor.mailAddress.zipcode}
                               readOnly
+                              inputMode="numeric"
                               placeholder="우편번호"
                               style={{ flex: 1 }}
                             />
                             <button
                               type="button"
                               className="btn btn-secondary"
+                              style={{ whiteSpace: 'nowrap' }}
                               onClick={async () => {
                                 try {
                                   const addr = await openAddressSearch();

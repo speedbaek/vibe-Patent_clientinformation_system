@@ -1,13 +1,17 @@
-import { createContext, useContext, useReducer, ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import {
   FormState,
   Applicant,
   Inventor,
   ApplicationType,
   ContactPerson,
+  UploadedDocument,
   createEmptyApplicant,
   createEmptyInventor,
+  createEmptyContact,
 } from '../types/index.js';
+
+const STORAGE_KEY = 'patent-form-draft';
 
 // ── 초기 상태 ──
 const initialState: FormState = {
@@ -15,19 +19,76 @@ const initialState: FormState = {
   privacyConsentedAt: null,
   newsletterConsent: false,
   applicationType: 'patent',
-  contactPerson: { name: '', phone: '', email: '' },
+  contactPersons: [createEmptyContact()],
   caseTitle: '',
   applicants: [createEmptyApplicant()],
   inventors: [createEmptyInventor()],
+  extraDocuments: [],
   currentStep: 1,
 };
+
+function loadSavedState(): FormState {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return initialState;
+    const parsed = JSON.parse(saved);
+    // 제출 완료(step 5) 상태였으면 초기화
+    if (parsed.currentStep >= 5) {
+      localStorage.removeItem(STORAGE_KEY);
+      return initialState;
+    }
+    // 기존 contactPerson → contactPersons 마이그레이션
+    if (parsed.contactPerson && !parsed.contactPersons) {
+      parsed.contactPersons = [{
+        id: `ct-migrated`,
+        ...parsed.contactPerson,
+      }];
+      delete parsed.contactPerson;
+    }
+    // contactPersons가 비어있으면 기본값
+    if (!parsed.contactPersons || parsed.contactPersons.length === 0) {
+      parsed.contactPersons = [createEmptyContact()];
+    }
+    // taxEmail 필드 마이그레이션
+    parsed.contactPersons = parsed.contactPersons.map((c: any) => ({
+      ...c,
+      taxEmail: c.taxEmail ?? '',
+    }));
+    // extraDocuments 마이그레이션
+    if (!parsed.extraDocuments) {
+      parsed.extraDocuments = [];
+    }
+    // PCT → foreign_patent 마이그레이션
+    if (parsed.applicationType === 'pct') {
+      parsed.applicationType = 'foreign_patent';
+    }
+    return parsed as FormState;
+  } catch {
+    return initialState;
+  }
+}
+
+function saveState(state: FormState) {
+  try {
+    // 제출 완료 상태면 저장하지 않고 삭제
+    if (state.currentStep >= 5) {
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // localStorage 용량 초과 등 무시
+  }
+}
 
 // ── 액션 타입 ──
 type FormAction =
   | { type: 'SET_PRIVACY_CONSENT'; agreed: boolean }
   | { type: 'SET_NEWSLETTER_CONSENT'; agreed: boolean }
   | { type: 'SET_APPLICATION_TYPE'; applicationType: ApplicationType }
-  | { type: 'SET_CONTACT'; contactPerson: ContactPerson }
+  | { type: 'ADD_CONTACT' }
+  | { type: 'REMOVE_CONTACT'; id: string }
+  | { type: 'UPDATE_CONTACT'; id: string; data: Partial<ContactPerson> }
   | { type: 'SET_CASE_TITLE'; caseTitle: string }
   | { type: 'SET_STEP'; step: number }
   | { type: 'ADD_APPLICANT' }
@@ -37,6 +98,8 @@ type FormAction =
   | { type: 'REMOVE_INVENTOR'; id: string }
   | { type: 'UPDATE_INVENTOR'; id: string; data: Partial<Inventor> }
   | { type: 'COPY_APPLICANTS_TO_INVENTORS' }
+  | { type: 'ADD_EXTRA_DOCUMENT'; doc: UploadedDocument }
+  | { type: 'REMOVE_EXTRA_DOCUMENT'; index: number }
   | { type: 'RESET' };
 
 // ── 리듀서 ──
@@ -55,8 +118,23 @@ function formReducer(state: FormState, action: FormAction): FormState {
     case 'SET_APPLICATION_TYPE':
       return { ...state, applicationType: action.applicationType };
 
-    case 'SET_CONTACT':
-      return { ...state, contactPerson: action.contactPerson };
+    case 'ADD_CONTACT':
+      return { ...state, contactPersons: [...state.contactPersons, createEmptyContact()] };
+
+    case 'REMOVE_CONTACT':
+      if (state.contactPersons.length <= 1) return state;
+      return {
+        ...state,
+        contactPersons: state.contactPersons.filter((c) => c.id !== action.id),
+      };
+
+    case 'UPDATE_CONTACT':
+      return {
+        ...state,
+        contactPersons: state.contactPersons.map((c) =>
+          c.id === action.id ? { ...c, ...action.data } : c
+        ),
+      };
 
     case 'SET_CASE_TITLE':
       return { ...state, caseTitle: action.caseTitle };
@@ -113,8 +191,6 @@ function formReducer(state: FormState, action: FormAction): FormState {
         nameKr: a.nameKr,
         nameEn: a.nameEn,
         rrn: a.rrn,
-        phone: a.phone,
-        email: a.email,
         address: { ...a.address },
         mailAddress: { ...a.mailAddress },
         useMailAddress: a.useMailAddress,
@@ -123,8 +199,25 @@ function formReducer(state: FormState, action: FormAction): FormState {
       return { ...state, inventors: newInventors };
     }
 
-    case 'RESET':
-      return { ...initialState, applicants: [createEmptyApplicant()], inventors: [createEmptyInventor()] };
+    case 'ADD_EXTRA_DOCUMENT':
+      return { ...state, extraDocuments: [...state.extraDocuments, action.doc] };
+
+    case 'REMOVE_EXTRA_DOCUMENT':
+      return {
+        ...state,
+        extraDocuments: state.extraDocuments.filter((_, i) => i !== action.index),
+      };
+
+    case 'RESET': {
+      localStorage.removeItem(STORAGE_KEY);
+      return {
+        ...initialState,
+        contactPersons: [createEmptyContact()],
+        applicants: [createEmptyApplicant()],
+        inventors: [createEmptyInventor()],
+        extraDocuments: [],
+      };
+    }
 
     default:
       return state;
@@ -140,7 +233,13 @@ interface FormContextType {
 const FormContext = createContext<FormContextType | null>(null);
 
 export function FormProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(formReducer, initialState);
+  const [state, dispatch] = useReducer(formReducer, undefined, loadSavedState);
+
+  // 상태 변경 시 자동 저장
+  useEffect(() => {
+    saveState(state);
+  }, [state]);
+
   return (
     <FormContext.Provider value={{ state, dispatch }}>
       {children}

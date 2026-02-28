@@ -11,17 +11,22 @@ export interface ValidationError {
 export function validateStep1(state: FormState): ValidationError[] {
   const errors: ValidationError[] = [];
 
-  if (!state.contactPerson.name.trim()) {
-    errors.push({ field: 'contactPerson.name', message: '담당자 성함을 입력해 주세요.' });
-  }
-  if (!state.contactPerson.phone.trim()) {
-    errors.push({ field: 'contactPerson.phone', message: '담당자 연락처를 입력해 주세요.' });
-  }
-  if (!state.contactPerson.email.trim()) {
-    errors.push({ field: 'contactPerson.email', message: '담당자 이메일을 입력해 주세요.' });
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.contactPerson.email)) {
-    errors.push({ field: 'contactPerson.email', message: '올바른 이메일 형식을 입력해 주세요.' });
-  }
+  state.contactPersons.forEach((contact, idx) => {
+    const label = state.contactPersons.length > 1 ? `담당자 ${idx + 1}: ` : '';
+    const prefix = `contactPersons.${idx}`;
+
+    if (!contact.name.trim()) {
+      errors.push({ field: `${prefix}.name`, message: `${label}성함을 입력해 주세요.` });
+    }
+    if (!contact.phone.trim()) {
+      errors.push({ field: `${prefix}.phone`, message: `${label}연락처를 입력해 주세요.` });
+    }
+    if (!contact.email.trim()) {
+      errors.push({ field: `${prefix}.email`, message: `${label}이메일을 입력해 주세요.` });
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) {
+      errors.push({ field: `${prefix}.email`, message: `${label}올바른 이메일 형식을 입력해 주세요.` });
+    }
+  });
 
   return errors;
 }
@@ -62,6 +67,21 @@ function validateApplicant(ap: Applicant, index: number): ValidationError[] {
     }
   }
 
+  // 국내 법인 사업자등록증 필수
+  if (ap.personType === 'domestic_corp' && !ap.bizLicenseDataUrl) {
+    errors.push({ field: `${prefix}.bizLicense`, message: `출원인 ${index + 1}: 사업자등록증을 첨부해 주세요.` });
+  }
+
+  // 국내 개인 영문 성명 필수
+  if (ap.personType === 'domestic_individual' && !ap.nameEn.trim()) {
+    errors.push({ field: `${prefix}.nameEn`, message: `출원인 ${index + 1}: 영문 성명을 입력해 주세요.` });
+  }
+
+  // 국내 법인 영문 명칭 필수
+  if (ap.personType === 'domestic_corp' && !ap.nameEn.trim()) {
+    errors.push({ field: `${prefix}.nameEn`, message: `출원인 ${index + 1}: 영문 명칭을 입력해 주세요.` });
+  }
+
   // 외국인 추가 필드
   if (isForeign) {
     if (!ap.nameEn.trim()) {
@@ -97,7 +117,7 @@ export function validateStep3(state: FormState): ValidationError[] {
   const errors: ValidationError[] = [];
 
   if (!NEED_INVENTOR.includes(state.applicationType)) {
-    return errors; // 상표/디자인은 발명자 불필요
+    return errors; // 상표, 해외(상표,디자인)은 발명자 불필요
   }
 
   // 발명자가 전부 비어있는지 확인

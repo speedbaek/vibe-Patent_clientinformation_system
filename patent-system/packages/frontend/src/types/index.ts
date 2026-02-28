@@ -8,7 +8,7 @@ export type PersonType =
   | 'association';
 
 // ── 출원 유형 ──
-export type ApplicationType = 'patent' | 'trademark' | 'design' | 'pct';
+export type ApplicationType = 'patent' | 'trademark' | 'design' | 'foreign_patent' | 'foreign_design';
 
 // ── 주소 ──
 export interface Address {
@@ -50,9 +50,9 @@ export interface Applicant {
   mailAddress: Address;
   useMailAddress: boolean;
 
-  // 연락처
-  phone: string;
-  email: string;
+  // 사업자등록증 (국내 법인 필수)
+  bizLicenseDataUrl: string;
+  bizLicenseFileName: string;
 
   // 서명 & 문서
   signatureDataUrl: string;
@@ -72,11 +72,24 @@ export interface Inventor {
   useMailAddress: boolean;
 }
 
-// ── 연락처 ──
+// ── 담당자 연락처 ──
 export interface ContactPerson {
+  id: string;
   name: string;
   phone: string;
   email: string;
+  taxEmail: string;
+}
+
+// ── 빈 담당자 생성 ──
+export function createEmptyContact(id?: string): ContactPerson {
+  return {
+    id: id || `ct-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: '',
+    phone: '',
+    email: '',
+    taxEmail: '',
+  };
 }
 
 // ── 폼 전체 상태 ──
@@ -88,7 +101,7 @@ export interface FormState {
 
   // Step 1
   applicationType: ApplicationType;
-  contactPerson: ContactPerson;
+  contactPersons: ContactPerson[];
   caseTitle: string;
 
   // Step 2
@@ -97,19 +110,23 @@ export interface FormState {
   // Step 3
   inventors: Inventor[];
 
+  // Step 4 기타 파일 첨부
+  extraDocuments: UploadedDocument[];
+
   // 현재 단계
   currentStep: number;
 }
 
 // ── 발명자가 필요한 출원 유형 ──
-export const NEED_INVENTOR: ApplicationType[] = ['patent', 'pct'];
+export const NEED_INVENTOR: ApplicationType[] = ['patent', 'design', 'foreign_patent'];
 
 // ── 출원 유형 라벨 ──
 export const APPLICATION_TYPE_LABELS: Record<ApplicationType, string> = {
   patent: '특허/실용신안',
   trademark: '상표',
   design: '디자인',
-  pct: 'PCT 국제출원',
+  foreign_patent: '해외(특허)',
+  foreign_design: '해외(상표,디자인)',
 };
 
 // ── 출원인 유형 라벨 ──
@@ -142,10 +159,10 @@ export function createEmptyApplicant(id?: string): Applicant {
     nameKr: '', rrn: '', nationality: 'KR',
     corpName: '', corpRegNum: '', bizNum: '', ceoName: '',
     nameEn: '', passport: '',
+    bizLicenseDataUrl: '', bizLicenseFileName: '',
     address: { zipcode: '', roadAddr: '', detailAddr: '' },
     mailAddress: { zipcode: '', roadAddr: '', detailAddr: '' },
     useMailAddress: false,
-    phone: '', email: '',
     signatureDataUrl: '',
     documents: [],
   };

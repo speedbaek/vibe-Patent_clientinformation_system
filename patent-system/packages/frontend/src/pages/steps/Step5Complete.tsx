@@ -69,11 +69,11 @@ export default function Step5Complete({ submittedAt, caseNumber }: Step5Props) {
           <div className="info-box orange" style={{ marginTop: '16px', textAlign: 'left' }}>
             <strong>미제출 서류가 있으신가요?</strong>
             <p>
-              서명, 사업자등록증, 인감 등 미제출 서류는 접수번호(<strong>{caseNumber}</strong>)를
-              이용하여 언제든 추가 제출할 수 있습니다.
+              서명, 사업자등록증, 인감 등 미제출 서류는 담당자 성함 또는 이메일을 통해
+              본인 확인 후 언제든 추가 제출할 수 있습니다.
             </p>
             <a
-              href={`/upload-additional?case=${encodeURIComponent(caseNumber || '')}`}
+              href="/upload-additional"
               style={{ color: '#bf360c', fontWeight: 600 }}
             >
               첨부서류 추가제출하기 →

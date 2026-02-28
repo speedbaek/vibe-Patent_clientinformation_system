@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { UploadedDocument } from '../types/index.js';
 import { formatFileSize } from '../utils/formatters.js';
 import { uploadFile } from '../api/client.js';
@@ -27,6 +27,11 @@ export default function FileUpload({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
+
+  const isMobile = useMemo(
+    () => window.innerWidth <= 520 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
+    [],
+  );
 
   async function processFile(file: File) {
     const maxSize = 10 * 1024 * 1024;
@@ -101,7 +106,8 @@ export default function FileUpload({
         <input
           ref={inputRef}
           type="file"
-          accept={accept}
+          accept={isMobile ? `${accept};capture=camera` : accept}
+          capture={isMobile ? 'environment' : undefined}
           onChange={handleFileSelect}
           style={{ display: 'none' }}
           disabled={uploading}
@@ -110,6 +116,8 @@ export default function FileUpload({
           <p>업로드 중...</p>
         ) : dragOver ? (
           <p style={{ color: '#1a5fb4', fontWeight: 600 }}>여기에 파일을 놓으세요</p>
+        ) : isMobile ? (
+          <p>탭하여 파일 선택 또는 카메라 촬영<br /><small style={{ color: '#999' }}>JPG, PNG, PDF / 최대 10MB</small></p>
         ) : (
           <p>파일을 드래그하거나 클릭하여 선택 (JPG, PNG, PDF / 최대 10MB)</p>
         )}

@@ -89,7 +89,8 @@ export function submitHandler(req: Request, res: Response): void {
   const {
     sessionId,
     applicationType,
-    contactPerson,
+    contactPersons,
+    contactPerson, // 하위 호환
     caseTitle,
     applicants,
     inventors,
@@ -102,10 +103,20 @@ export function submitHandler(req: Request, res: Response): void {
     return;
   }
 
-  if (!contactPerson?.name || !contactPerson?.phone || !contactPerson?.email) {
+  // 복수 담당자 배열 또는 기존 단일 담당자 호환 처리
+  const contacts: Array<{ name: string; phone: string; email: string }> =
+    Array.isArray(contactPersons) && contactPersons.length > 0
+      ? contactPersons
+      : contactPerson
+        ? [contactPerson]
+        : [];
+
+  if (contacts.length === 0 || !contacts[0].name || !contacts[0].phone || !contacts[0].email) {
     res.status(400).json({ success: false, error: '담당자 연락처 정보를 입력해 주세요.' });
     return;
   }
+
+  const primaryContact = contacts[0];
 
   // 출원인 데이터 암호화
   const encryptedApplicants = (applicants || []).map((ap: Record<string, unknown>) => {
@@ -132,15 +143,17 @@ export function submitHandler(req: Request, res: Response): void {
       `INSERT INTO submissions (
         case_number, application_type, status,
         contact_name, contact_phone, contact_email,
+        contacts_json,
         case_title, privacy_agreed, privacy_timestamp, privacy_ip,
         applicants_json, inventors_json, ip_address, newsletter_consent, submitted_at
-      ) VALUES (?, ?, 'submitted', ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, 'submitted', ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`,
       [
         caseNumber,
         applicationType || 'patent',
-        contactPerson.name,
-        contactPerson.phone,
-        contactPerson.email,
+        primaryContact.name,
+        primaryContact.phone,
+        primaryContact.email,
+        JSON.stringify(contacts),
         caseTitle || '',
         now,
         req.ip || '',
@@ -166,15 +179,19 @@ export function submitHandler(req: Request, res: Response): void {
 
     saveDb();
 
-    // 이메일 발송 (비동기, 실패해도 제출은 성공)
-    sendSubmissionEmail({
-      caseNumber,
-      contactName: contactPerson.name,
-      contactEmail: contactPerson.email,
-      applicationType: applicationType || 'patent',
-      caseTitle: caseTitle || undefined,
-      submittedAt: now,
-    }).catch(() => {});
+    // 이메일 발송 (비동기, 실패해도 제출은 성공) — 모든 담당자에게 발송
+    for (const ct of contacts) {
+      if (ct.email) {
+        sendSubmissionEmail({
+          caseNumber,
+          contactName: ct.name,
+          contactEmail: ct.email,
+          applicationType: applicationType || 'patent',
+          caseTitle: caseTitle || undefined,
+          submittedAt: now,
+        }).catch(() => {});
+      }
+    }
 
     res.json({
       success: true,

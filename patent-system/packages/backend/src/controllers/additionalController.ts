@@ -14,14 +14,14 @@ function queryAll(sql: string, params: any[] = []): Record<string, any>[] {
   return results;
 }
 
-/** 접수건 조회 — 접수번호(선택) + 성함/이메일 중 하나 이상 */
+/** 접수건 조회 — 담당자 연락처 또는 이메일로 검색 */
 export function verifySubmission(req: Request, res: Response): void {
-  const { caseNumber, contactName, contactEmail } = req.body;
+  const { contactPhone, contactEmail } = req.body;
 
-  if (!contactName && !contactEmail) {
+  if (!contactPhone && !contactEmail) {
     res.status(400).json({
       success: false,
-      error: '담당자 성함 또는 이메일을 입력해 주세요.',
+      error: '담당자 연락처 또는 이메일을 입력해 주세요.',
     });
     return;
   }
@@ -29,48 +29,33 @@ export function verifySubmission(req: Request, res: Response): void {
   const db = getDb();
   let row: Record<string, any> | null = null;
 
-  // 1) 접수번호가 있으면 우선 조회
-  if (caseNumber && caseNumber.trim()) {
-    const stmt = db.prepare(
-      'SELECT id, case_number, contact_name, contact_email, application_type, case_title, status FROM submissions WHERE case_number = ?',
-    );
-    stmt.bind([caseNumber.trim()]);
-    if (stmt.step()) {
-      row = stmt.getAsObject();
-    }
-    stmt.free();
+  // 연락처 또는 이메일로 최신 접수건 검색 (기본 필드 + contacts_json)
+  const conditions: string[] = [];
+  const params: any[] = [];
 
-    if (!row) {
-      res.status(404).json({ success: false, error: '해당 접수번호를 찾을 수 없습니다.' });
-      return;
-    }
-  } else {
-    // 2) 접수번호 없음 — 성함 또는 이메일로 최신 접수건 검색
-    const conditions: string[] = [];
-    const params: any[] = [];
-
-    if (contactName && contactName.trim()) {
-      conditions.push('LOWER(contact_name) = LOWER(?)');
-      params.push(contactName.trim());
-    }
-    if (contactEmail && contactEmail.trim()) {
-      conditions.push('LOWER(contact_email) = LOWER(?)');
-      params.push(contactEmail.trim());
-    }
-
-    const where = conditions.join(' OR ');
-    const rows = queryAll(
-      `SELECT id, case_number, contact_name, contact_email, application_type, case_title, status
-       FROM submissions WHERE ${where} ORDER BY id DESC LIMIT 1`,
-      params,
-    );
-
-    if (rows.length === 0) {
-      res.status(404).json({ success: false, error: '일치하는 접수 내역을 찾을 수 없습니다.' });
-      return;
-    }
-    row = rows[0];
+  if (contactPhone && contactPhone.trim()) {
+    const phone = contactPhone.trim();
+    conditions.push('(contact_phone = ? OR contacts_json LIKE ?)');
+    params.push(phone, `%"phone":"${phone}"%`);
   }
+  if (contactEmail && contactEmail.trim()) {
+    const email = contactEmail.trim();
+    conditions.push('(LOWER(contact_email) = LOWER(?) OR LOWER(contacts_json) LIKE LOWER(?))');
+    params.push(email, `%"email":"${email}"%`);
+  }
+
+  const where = conditions.join(' OR ');
+  const rows = queryAll(
+    `SELECT id, case_number, contact_name, contact_email, application_type, case_title, status
+     FROM submissions WHERE ${where} ORDER BY id DESC LIMIT 1`,
+    params,
+  );
+
+  if (rows.length === 0) {
+    res.status(404).json({ success: false, error: '일치하는 접수 내역을 찾을 수 없습니다.' });
+    return;
+  }
+  row = rows[0];
 
   // 기존 첨부파일 목록 조회
   const fileStmt = db.prepare(

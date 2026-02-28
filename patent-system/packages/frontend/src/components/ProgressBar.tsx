@@ -5,7 +5,7 @@ const STEPS = [
   { num: 1, label: '출원유형' },
   { num: 2, label: '출원인 정보' },
   { num: 3, label: '발명자 정보' },
-  { num: 4, label: '서류·서명' },
+  { num: 4, label: '파일 첨부' },
   { num: 5, label: '접수완료' },
 ];
 

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../config/database.js';
+import { getDb, saveDb } from '../config/database.js';
 import { env } from '../config/env.js';
+import { decryptField } from '../services/encryptionService.js';
 import path from 'path';
 
 const router = Router();
@@ -61,15 +62,40 @@ router.get('/submissions', adminAuth, (req: Request, res: Response) => {
   const total = countRow?.cnt ?? 0;
 
   const rows = queryAll(
-    `SELECT id, case_number, application_type, status, contact_name, contact_email, case_title, submitted_at, created_at
+    `SELECT id, case_number, application_type, status, contact_name, contact_phone, contact_email, contacts_json, case_title, applicants_json, submitted_at, created_at
      FROM submissions ${where}
      ORDER BY id DESC LIMIT ? OFFSET ?`,
     [...params, lim, offset],
   );
 
+  // 출원인 대표 이름 추출 + 담당자 정보 파싱
+  const enrichedRows = rows.map((row) => {
+    let applicantName = '';
+    try {
+      const applicants = JSON.parse((row.applicants_json as string) || '[]');
+      if (applicants.length > 0) {
+        const first = applicants[0];
+        applicantName = first.nameKr || first.corpName || '';
+        if (applicants.length > 1) applicantName += ` 외 ${applicants.length - 1}명`;
+      }
+    } catch { /* ignore */ }
+
+    // contacts_json 파싱 (없으면 기존 단일 담당자 필드로 폴백)
+    let contacts: any[] = [];
+    try {
+      contacts = JSON.parse((row.contacts_json as string) || '[]');
+    } catch { /* ignore */ }
+    if (contacts.length === 0 && row.contact_name) {
+      contacts = [{ name: row.contact_name, phone: row.contact_phone, email: row.contact_email }];
+    }
+
+    const { applicants_json, contacts_json, ...rest } = row;
+    return { ...rest, applicant_name: applicantName, contacts };
+  });
+
   res.json({
     success: true,
-    data: rows,
+    data: enrichedRows,
     total,
     page: parseInt(page as string, 10),
     totalPages: Math.ceil(total / lim),
@@ -90,6 +116,26 @@ router.get('/submissions/:id', adminAuth, (req: Request, res: Response) => {
   let applicants = [];
   try {
     applicants = JSON.parse((row.applicants_json as string) || '[]');
+    // 암호화된 민감 필드 복호화
+    applicants = applicants.map((ap: any) => {
+      if (ap.rrnEncrypted) {
+        ap.rrn = decryptField(ap.rrnEncrypted);
+        delete ap.rrnEncrypted;
+      }
+      if (ap.corpRegNumEncrypted) {
+        ap.corpRegNum = decryptField(ap.corpRegNumEncrypted);
+        delete ap.corpRegNumEncrypted;
+      }
+      if (ap.bizNumEncrypted) {
+        ap.bizNum = decryptField(ap.bizNumEncrypted);
+        delete ap.bizNumEncrypted;
+      }
+      if (ap.passportEncrypted) {
+        ap.passport = decryptField(ap.passportEncrypted);
+        delete ap.passportEncrypted;
+      }
+      return ap;
+    });
   } catch { applicants = []; }
 
   let inventors = [];
@@ -97,15 +143,41 @@ router.get('/submissions/:id', adminAuth, (req: Request, res: Response) => {
     inventors = JSON.parse((row.inventors_json as string) || '[]');
   } catch { inventors = []; }
 
+  // 복수 담당자 파싱 (없으면 기존 단일 담당자 필드로 폴백)
+  let contacts: any[] = [];
+  try {
+    contacts = JSON.parse((row.contacts_json as string) || '[]');
+  } catch { /* ignore */ }
+  if (contacts.length === 0 && row.contact_name) {
+    contacts = [{ name: row.contact_name, phone: row.contact_phone, email: row.contact_email }];
+  }
+
   res.json({
     success: true,
     data: {
       ...row,
       applicants,
       inventors,
+      contacts,
       files,
     },
   });
+});
+
+/** 접수 상태 변경 */
+router.patch('/submissions/:id/status', adminAuth, (req: Request, res: Response) => {
+  const { status } = req.body;
+  const validStatuses = ['submitted', 'reviewing', 'complete'];
+  if (!status || !validStatuses.includes(status)) {
+    res.status(400).json({ success: false, error: '유효하지 않은 상태입니다.' });
+    return;
+  }
+
+  const db = getDb();
+  db.run('UPDATE submissions SET status = ? WHERE id = ?', [status, parseInt(req.params.id, 10)]);
+  saveDb();
+
+  res.json({ success: true });
 });
 
 /** 파일 다운로드 */

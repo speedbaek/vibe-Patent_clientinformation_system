@@ -5,7 +5,9 @@ const APPLICATION_TYPE_LABELS: Record<string, string> = {
   patent: '특허/실용신안',
   trademark: '상표',
   design: '디자인',
-  pct: 'PCT 국제출원',
+  foreign_patent: '해외(특허)',
+  foreign_design: '해외(상표,디자인)',
+  pct: 'PCT 국제출원', // 레거시 호환
 };
 
 interface SubmissionEmailData {
