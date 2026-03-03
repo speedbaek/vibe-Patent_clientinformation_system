@@ -8,7 +8,7 @@ export type PersonType =
   | 'association';
 
 // ── 출원 유형 ──
-export type ApplicationType = 'patent' | 'trademark' | 'design' | 'foreign_patent' | 'foreign_design';
+export type ApplicationType = '' | 'patent' | 'trademark' | 'design' | 'foreign_patent' | 'foreign_design';
 
 // ── 주소 ──
 export interface Address {
@@ -122,6 +122,7 @@ export const NEED_INVENTOR: ApplicationType[] = ['patent', 'design', 'foreign_pa
 
 // ── 출원 유형 라벨 ──
 export const APPLICATION_TYPE_LABELS: Record<ApplicationType, string> = {
+  '': '',
   patent: '특허/실용신안',
   trademark: '상표',
   design: '디자인',

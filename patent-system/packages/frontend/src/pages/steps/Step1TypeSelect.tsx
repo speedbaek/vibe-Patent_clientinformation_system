@@ -28,7 +28,7 @@ export default function Step1TypeSelect({ getFieldError }: Props) {
           <h2>출원 유형 선택</h2>
         </div>
         <div className="card-body">
-          <div className="type-grid type-grid-3">
+          <div className={`type-grid type-grid-3 ${getFieldError?.('applicationType') ? 'type-grid-error' : ''}`}>
             {appTypes.map(({ type, desc }) => (
               <div
                 key={type}
@@ -40,6 +40,9 @@ export default function Step1TypeSelect({ getFieldError }: Props) {
               </div>
             ))}
           </div>
+          {getFieldError?.('applicationType') && (
+            <p className="field-error" style={{ marginTop: '8px' }}>{getFieldError('applicationType')}</p>
+          )}
         </div>
       </div>
 

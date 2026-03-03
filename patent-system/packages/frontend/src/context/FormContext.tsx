@@ -18,7 +18,7 @@ const initialState: FormState = {
   privacyConsented: false,
   privacyConsentedAt: null,
   newsletterConsent: false,
-  applicationType: 'patent',
+  applicationType: '',
   contactPersons: [createEmptyContact()],
   caseTitle: '',
   applicants: [createEmptyApplicant()],

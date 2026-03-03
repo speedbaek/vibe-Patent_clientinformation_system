@@ -11,6 +11,10 @@ export interface ValidationError {
 export function validateStep1(state: FormState): ValidationError[] {
   const errors: ValidationError[] = [];
 
+  if (!state.applicationType) {
+    errors.push({ field: 'applicationType', message: '출원 유형을 선택해 주세요.' });
+  }
+
   state.contactPersons.forEach((contact, idx) => {
     const label = state.contactPersons.length > 1 ? `담당자 ${idx + 1}: ` : '';
     const prefix = `contactPersons.${idx}`;
