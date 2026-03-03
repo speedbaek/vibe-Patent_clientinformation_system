@@ -62,6 +62,11 @@ function loadSavedState(): FormState {
     if (parsed.applicationType === 'pct') {
       parsed.applicationType = 'foreign_patent';
     }
+    // 뉴스레터 옵트아웃 방식 마이그레이션 (기본 체크)
+    if (!parsed._nlMigrated) {
+      parsed.newsletterConsent = true;
+      parsed._nlMigrated = true;
+    }
     return parsed as FormState;
   } catch {
     return initialState;
