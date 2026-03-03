@@ -13,7 +13,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 // ── 기본 미들웨어 ──
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://t1.daumcdn.net"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      frameSrc: ["'self'", "https://t1.daumcdn.net"],
+      connectSrc: ["'self'"],
+    },
+  },
+}));
 app.use(cors({
   origin: env.frontendUrl,
   credentials: true,

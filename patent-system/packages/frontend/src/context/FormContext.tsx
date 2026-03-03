@@ -17,7 +17,7 @@ const STORAGE_KEY = 'patent-form-draft';
 const initialState: FormState = {
   privacyConsented: false,
   privacyConsentedAt: null,
-  newsletterConsent: false,
+  newsletterConsent: true,
   applicationType: '',
   contactPersons: [createEmptyContact()],
   caseTitle: '',
