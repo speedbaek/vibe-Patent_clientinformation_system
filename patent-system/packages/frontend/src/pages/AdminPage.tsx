@@ -160,11 +160,13 @@ function buildInventorText(inv: any): string {
   return lines.join('\n');
 }
 
+const ADMIN_TOKEN_KEY = 'admin-session-token';
+
 export default function AdminPage() {
   const [password, setPassword] = useState('');
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(() => !!sessionStorage.getItem(ADMIN_TOKEN_KEY));
   const [authError, setAuthError] = useState('');
-  const [authToken, setAuthToken] = useState('');
+  const [authToken, setAuthToken] = useState(() => sessionStorage.getItem(ADMIN_TOKEN_KEY) || '');
 
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -187,6 +189,7 @@ export default function AdminPage() {
       setTotalPages(data.totalPages);
     } catch (err: any) {
       if (err?.response?.status === 401) {
+        sessionStorage.removeItem(ADMIN_TOKEN_KEY);
         setAuthenticated(false);
         setAuthToken('');
       }
@@ -205,6 +208,7 @@ export default function AdminPage() {
     try {
       const { data } = await apiClient.post('/admin/login', { password });
       if (data.success) {
+        sessionStorage.setItem(ADMIN_TOKEN_KEY, data.data.token);
         setAuthToken(data.data.token);
         setAuthenticated(true);
         setAuthError('');
