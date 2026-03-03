@@ -4,13 +4,8 @@ import { env } from '../config/env.js';
 const ALGORITHM = 'aes-256-cbc';
 
 function getKey(): Buffer {
-  // 환경변수의 hex 키를 32바이트 Buffer로 변환
-  const keyHex = env.aesKey;
-  if (!keyHex || keyHex.length < 64) {
-    // 개발 환경: 기본 키 생성
-    return crypto.scryptSync('dev-fallback-key', 'salt', 32);
-  }
-  return Buffer.from(keyHex, 'hex');
+  // env.ts에서 이미 키 검증 완료 (프로덕션은 필수, 개발은 자동생성)
+  return Buffer.from(env.aesKey, 'hex');
 }
 
 /**

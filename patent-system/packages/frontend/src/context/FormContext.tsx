@@ -68,6 +68,7 @@ function loadSavedState(): FormState {
   }
 }
 
+/** 민감 정보를 제거한 상태를 localStorage에 저장 */
 function saveState(state: FormState) {
   try {
     // 제출 완료 상태면 저장하지 않고 삭제
@@ -75,7 +76,27 @@ function saveState(state: FormState) {
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+    // 민감 필드 제거 후 저장 (XSS 공격 시 PII 노출 방지)
+    const sanitized = {
+      ...state,
+      applicants: state.applicants.map((ap) => ({
+        ...ap,
+        rrn: '',                   // 주민등록번호
+        corpRegNum: '',            // 법인등록번호
+        bizNum: '',                // 사업자등록번호
+        passport: '',              // 여권번호
+        signatureDataUrl: '',      // 서명 이미지
+        bizLicenseDataUrl: '',     // 사업자등록증 이미지
+        bizLicenseFileName: '',
+      })),
+      inventors: state.inventors.map((inv) => ({
+        ...inv,
+        rrn: '',                   // 주민등록번호
+      })),
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
   } catch {
     // localStorage 용량 초과 등 무시
   }

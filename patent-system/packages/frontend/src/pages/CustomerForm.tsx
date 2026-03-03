@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFormContext } from '../context/FormContext.js';
 import { submitForm } from '../api/client.js';
 import { NEED_INVENTOR } from '../types/index.js';
-import { validateCurrentStep, validateStep4, ValidationError } from '../utils/validators.js';
+import { validateCurrentStep, validateStep1, validateStep2, validateStep3, validateStep4, ValidationError } from '../utils/validators.js';
 
 import PrivacyConsent from '../components/PrivacyConsent.js';
 import ProgressBar from '../components/ProgressBar.js';
@@ -139,9 +139,15 @@ export default function CustomerForm() {
   }
 
   async function handleSubmit() {
-    const errors = validateStep4(state);
-    if (errors.length > 0) {
-      setValidationErrors(errors);
+    // 최종 제출 전 모든 단계 통합 검증
+    const allErrors = [
+      ...validateStep1(state),
+      ...validateStep2(state),
+      ...(needInventor ? validateStep3(state) : []),
+      ...validateStep4(state),
+    ];
+    if (allErrors.length > 0) {
+      setValidationErrors(allErrors);
       setSubmitError('');
       setTimeout(() => {
         document.querySelector('.validation-error-summary')?.scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -14,6 +14,11 @@ function queryAll(sql: string, params: any[] = []): Record<string, any>[] {
   return results;
 }
 
+/** LIKE 패턴에서 SQL 와일드카드 이스케이프 */
+function escapeLikePattern(str: string): string {
+  return str.replace(/[%_\\]/g, '\\$&');
+}
+
 /** 접수건 조회 — 담당자 연락처 또는 이메일로 검색 */
 export function verifySubmission(req: Request, res: Response): void {
   const { contactPhone, contactEmail } = req.body;
@@ -35,13 +40,15 @@ export function verifySubmission(req: Request, res: Response): void {
 
   if (contactPhone && contactPhone.trim()) {
     const phone = contactPhone.trim();
-    conditions.push('(contact_phone = ? OR contacts_json LIKE ?)');
-    params.push(phone, `%"phone":"${phone}"%`);
+    const safePhone = escapeLikePattern(phone);
+    conditions.push('(contact_phone = ? OR contacts_json LIKE ? ESCAPE \'\\\')')
+    params.push(phone, `%"phone":"${safePhone}"%`);
   }
   if (contactEmail && contactEmail.trim()) {
     const email = contactEmail.trim();
-    conditions.push('(LOWER(contact_email) = LOWER(?) OR LOWER(contacts_json) LIKE LOWER(?))');
-    params.push(email, `%"email":"${email}"%`);
+    const safeEmail = escapeLikePattern(email);
+    conditions.push('(LOWER(contact_email) = LOWER(?) OR LOWER(contacts_json) LIKE LOWER(?) ESCAPE \'\\\')')
+    params.push(email, `%"email":"${safeEmail}"%`);
   }
 
   const where = conditions.join(' OR ');

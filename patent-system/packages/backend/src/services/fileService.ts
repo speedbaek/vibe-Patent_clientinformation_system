@@ -80,10 +80,32 @@ export const uploadSignature = multer({
 });
 
 /**
- * 파일 삭제
+ * 파일 경로가 허용된 디렉토리 내에 있는지 검증
+ */
+export function isPathWithinDir(filePath: string, allowedDir: string): boolean {
+  const resolvedPath = path.resolve(filePath);
+  const resolvedDir = path.resolve(allowedDir);
+  return resolvedPath.startsWith(resolvedDir + path.sep) || resolvedPath === resolvedDir;
+}
+
+/**
+ * 파일 삭제 — 업로드 디렉토리 내 파일만 삭제 허용
  */
 export function deleteFile(filePath: string): void {
+  // null byte 방지
+  if (filePath.includes('\0')) {
+    console.error('파일 경로에 null byte 감지:', filePath);
+    return;
+  }
+
   const fullPath = path.resolve(filePath);
+
+  // 업로드 디렉토리 밖의 파일 삭제 방지
+  if (!isPathWithinDir(fullPath, uploadDir)) {
+    console.error('업로드 디렉토리 밖 파일 삭제 시도 차단:', fullPath);
+    return;
+  }
+
   if (fs.existsSync(fullPath)) {
     fs.unlinkSync(fullPath);
   }

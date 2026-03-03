@@ -32,6 +32,7 @@ export default function ProgressBar() {
           const isActive = step.num === currentStep;
           const isDone = step.num < currentStep;
           const isClickable = step.num < currentStep;
+          const displayNum = idx + 1; // 화면에 보이는 순서 번호
 
           return (
             <div key={step.num} className="step-item">
@@ -44,7 +45,7 @@ export default function ProgressBar() {
                 role={isClickable ? 'button' : undefined}
                 tabIndex={isClickable ? 0 : undefined}
               >
-                {isDone ? '✓' : step.num}
+                {isDone ? '✓' : displayNum}
               </div>
               <div className={`step-label ${isActive ? 'active' : ''}`}>
                 {step.label}

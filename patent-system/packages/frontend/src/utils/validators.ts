@@ -1,4 +1,4 @@
-import { FormState, Applicant, NEED_INVENTOR } from '../types/index.js';
+import { FormState, Applicant, Inventor, NEED_INVENTOR } from '../types/index.js';
 
 export interface ValidationError {
   field: string;       // 필드 경로 (예: "contactPerson.name", "applicants.0.nameKr")
@@ -38,6 +38,7 @@ function validateApplicant(ap: Applicant, index: number): ValidationError[] {
   const errors: ValidationError[] = [];
   const prefix = `applicants.${index}`;
   const isIndividual = ap.personType === 'domestic_individual' || ap.personType === 'foreign_individual';
+  const isDomesticIndividual = ap.personType === 'domestic_individual';
   const isCorp = ['domestic_corp', 'foreign_corp', 'govt', 'association'].includes(ap.personType);
   const isForeign = ap.personType === 'foreign_individual' || ap.personType === 'foreign_corp';
 
@@ -46,8 +47,12 @@ function validateApplicant(ap: Applicant, index: number): ValidationError[] {
     if (!ap.nameKr.trim()) {
       errors.push({ field: `${prefix}.nameKr`, message: `출원인 ${index + 1}: 성명을 입력해 주세요.` });
     }
-    if (!ap.rrn.trim()) {
-      errors.push({ field: `${prefix}.rrn`, message: `출원인 ${index + 1}: 주민등록번호를 입력해 주세요.` });
+    if (isDomesticIndividual) {
+      if (!ap.rrn.trim()) {
+        errors.push({ field: `${prefix}.rrn`, message: `출원인 ${index + 1}: 주민등록번호를 입력해 주세요.` });
+      } else if (ap.rrn.replace(/[^0-9]/g, '').length !== 13) {
+        errors.push({ field: `${prefix}.rrn`, message: `출원인 ${index + 1}: 주민등록번호 13자리를 정확히 입력해 주세요.` });
+      }
     }
   }
 
@@ -64,6 +69,8 @@ function validateApplicant(ap: Applicant, index: number): ValidationError[] {
     }
     if (!ap.bizNum.trim()) {
       errors.push({ field: `${prefix}.bizNum`, message: `출원인 ${index + 1}: 사업자등록번호를 입력해 주세요.` });
+    } else if (ap.bizNum.replace(/[^0-9]/g, '').length !== 10) {
+      errors.push({ field: `${prefix}.bizNum`, message: `출원인 ${index + 1}: 사업자등록번호 10자리를 정확히 입력해 주세요.` });
     }
   }
 
@@ -87,6 +94,19 @@ function validateApplicant(ap: Applicant, index: number): ValidationError[] {
     if (!ap.nameEn.trim()) {
       errors.push({ field: `${prefix}.nameEn`, message: `출원인 ${index + 1}: 영문 성명을 입력해 주세요.` });
     }
+    if (ap.personType === 'foreign_individual' && !ap.passport.trim()) {
+      errors.push({ field: `${prefix}.passport`, message: `출원인 ${index + 1}: 여권번호를 입력해 주세요.` });
+    }
+  }
+
+  // 주소 필수 검증
+  if (!ap.address.zipcode.trim() || !ap.address.roadAddr.trim()) {
+    errors.push({ field: `${prefix}.address`, message: `출원인 ${index + 1}: 주소를 입력해 주세요. (주소검색 버튼 사용)` });
+  }
+
+  // 서명 필수 검증 — 개인(자연인)만
+  if (isIndividual && !ap.signatureDataUrl) {
+    errors.push({ field: `${prefix}.signature`, message: `출원인 ${index + 1}: 서명을 입력해 주세요.` });
   }
 
   return errors;
@@ -111,6 +131,35 @@ export function validateStep2(state: FormState): ValidationError[] {
 }
 
 /**
+ * 발명자 1명 검증 (이름이 입력된 발명자만)
+ */
+function validateInventor(inv: Inventor, index: number): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const prefix = `inventors.${index}`;
+
+  // 이름이 입력된 발명자만 상세 검증
+  if (!inv.nameKr.trim()) {
+    // 다른 필드가 채워져 있으면 이름 필수
+    if (inv.phone.trim() || inv.email.trim() || inv.nameEn.trim() || inv.rrn.trim()) {
+      errors.push({ field: `${prefix}.nameKr`, message: `발명자 ${index + 1}: 성명을 입력해 주세요.` });
+    }
+    return errors;
+  }
+
+  // 주민등록번호 형식 검증
+  if (inv.rrn.trim() && inv.rrn.replace(/[^0-9]/g, '').length !== 13) {
+    errors.push({ field: `${prefix}.rrn`, message: `발명자 ${index + 1}: 주민등록번호 13자리를 정확히 입력해 주세요.` });
+  }
+
+  // 주소 입력된 경우 우편번호+도로명 검증
+  if (inv.address.detailAddr.trim() && (!inv.address.zipcode.trim() || !inv.address.roadAddr.trim())) {
+    errors.push({ field: `${prefix}.address`, message: `발명자 ${index + 1}: 주소검색 버튼으로 주소를 입력해 주세요.` });
+  }
+
+  return errors;
+}
+
+/**
  * Step 3 검증: 발명자 정보
  */
 export function validateStep3(state: FormState): ValidationError[] {
@@ -128,9 +177,7 @@ export function validateStep3(state: FormState): ValidationError[] {
   }
 
   state.inventors.forEach((inv, idx) => {
-    if (inv.nameKr.trim() === '' && (inv.phone.trim() !== '' || inv.email.trim() !== '')) {
-      errors.push({ field: `inventors.${idx}.nameKr`, message: `발명자 ${idx + 1}: 성명을 입력해 주세요.` });
-    }
+    errors.push(...validateInventor(inv, idx));
   });
 
   return errors;

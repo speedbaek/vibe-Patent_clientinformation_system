@@ -14,6 +14,7 @@ const OTHER_OPTIONS: { value: PersonType; label: string }[] = [
   { value: 'association', label: '사단/재단법인' },
 ];
 import FormField, { SelectField } from './FormField.js';
+import SignaturePad from './SignaturePad.js';
 import { formatRRN, formatBizNum, formatCorpRegNum } from '../utils/formatters.js';
 import { openAddressSearch } from '../utils/daumPostcode.js';
 
@@ -51,7 +52,8 @@ export default function PersonCard({
     ? [
         `${prefix}.nameKr`, `${prefix}.rrn`, `${prefix}.corpName`,
         `${prefix}.ceoName`, `${prefix}.corpRegNum`, `${prefix}.bizNum`,
-        `${prefix}.nameEn`, `${prefix}.bizLicense`,
+        `${prefix}.nameEn`, `${prefix}.bizLicense`, `${prefix}.address`,
+        `${prefix}.signature`, `${prefix}.passport`,
       ].some(f => getFieldError(f))
     : false;
 
@@ -431,7 +433,32 @@ export default function PersonCard({
                 />
               </div>
             )}
+
+            {getFieldError?.(`${prefix}.address`) && (
+              <div className="field-error" style={{ marginTop: '6px' }}>
+                {getFieldError(`${prefix}.address`)}
+              </div>
+            )}
           </div>
+
+          {/* 서명 — 개인(자연인)만 */}
+          {isIndividual && (
+            <div className="field-section">
+              <h4 className="section-subtitle">
+                서명 <span className="required">*</span>
+              </h4>
+              <SignaturePad
+                applicantIndex={index}
+                initialData={applicant.signatureDataUrl}
+                onSignatureChange={(dataUrl) => onUpdate({ signatureDataUrl: dataUrl })}
+              />
+              {getFieldError?.(`${prefix}.signature`) && (
+                <div className="field-error" style={{ marginTop: '6px' }}>
+                  {getFieldError(`${prefix}.signature`)}
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
       )}

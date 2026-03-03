@@ -21,6 +21,7 @@ interface Submission {
   case_title: string;
   applicant_name: string;
   submitted_at: string;
+  newsletter_consent: number;
 }
 
 interface SubmissionDetail extends Submission {
@@ -75,6 +76,25 @@ function downloadSignature(dataUrl: string, name: string) {
   link.href = dataUrl;
   link.download = `서명_${name || '출원인'}.png`;
   link.click();
+}
+
+// ── 파일 다운로드 (fetch + blob — 토큰을 URL에 노출하지 않음) ──
+async function downloadFile(fileId: number, fileName: string, token: string) {
+  try {
+    const resp = await fetch(`/api/admin/files/${fileId}/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) throw new Error('다운로드 실패');
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    alert('파일 다운로드에 실패했습니다.');
+  }
 }
 
 // ── 주소 포맷팅 ──
@@ -144,6 +164,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [authToken, setAuthToken] = useState('');
 
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -153,7 +174,7 @@ export default function AdminPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const headers = { 'x-admin-password': password };
+  const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
 
   const fetchList = useCallback(async (p: number, filter?: string) => {
     try {
@@ -164,26 +185,30 @@ export default function AdminPage() {
       });
       setSubmissions(data.data);
       setTotalPages(data.totalPages);
-    } catch {
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        setAuthenticated(false);
+        setAuthToken('');
+      }
       setSubmissions([]);
     }
-  }, [password, statusFilter]);
+  }, [authToken, statusFilter]);
 
   const fetchStats = useCallback(async () => {
     try {
       const { data } = await apiClient.get('/admin/stats', { headers });
       setStats(data.data);
     } catch { /* ignore */ }
-  }, [password]);
+  }, [authToken]);
 
   async function handleLogin() {
     try {
-      const { data } = await apiClient.get('/admin/stats', {
-        headers: { 'x-admin-password': password },
-      });
+      const { data } = await apiClient.post('/admin/login', { password });
       if (data.success) {
+        setAuthToken(data.data.token);
         setAuthenticated(true);
         setAuthError('');
+        setPassword(''); // 비밀번호를 메모리에서 제거
       }
     } catch {
       setAuthError('비밀번호가 올바르지 않습니다.');
@@ -337,6 +362,12 @@ export default function AdminPage() {
               ))}
               {detail.case_title && <div className="receipt-row"><span className="receipt-label">사건명</span><span className="receipt-value">{detail.case_title}<CopyBtn text={detail.case_title} /></span></div>}
               <div className="receipt-row"><span className="receipt-label">접수일시</span><span className="receipt-value">{detail.submitted_at ? new Date(detail.submitted_at).toLocaleString('ko-KR') : '-'}</span></div>
+              <div className="receipt-row">
+                <span className="receipt-label">뉴스레터 수신동의</span>
+                <span className="receipt-value" style={{ color: detail.newsletter_consent ? '#1a5fb4' : '#999', fontWeight: detail.newsletter_consent ? 600 : 400 }}>
+                  {detail.newsletter_consent ? '동의함' : '미동의'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -489,12 +520,13 @@ export default function AdminPage() {
                     <span className="file-name">{f.original_name}</span>
                     <span style={{ color: '#666', fontSize: '12px' }}>{f.file_type}</span>
                   </div>
-                  <a
-                    href={`/api/admin/files/${f.id}/download?password=${encodeURIComponent(password)}`}
-                    style={{ fontSize: '12px', color: '#1a5fb4', fontWeight: 600, textDecoration: 'none' }}
+                  <button
+                    type="button"
+                    onClick={() => downloadFile(f.id, f.original_name, authToken)}
+                    style={{ fontSize: '12px', color: '#1a5fb4', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
                   >
                     다운로드
-                  </a>
+                  </button>
                 </div>
               ))}
             </div>
@@ -567,6 +599,7 @@ export default function AdminPage() {
                     <th style={{ padding: '10px 12px', textAlign: 'left', whiteSpace: 'nowrap' }}>담당자</th>
                     <th style={{ padding: '10px 12px', textAlign: 'left', whiteSpace: 'nowrap' }}>연락처</th>
                     <th style={{ padding: '10px 12px', textAlign: 'left', whiteSpace: 'nowrap' }}>접수번호</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>뉴스레터</th>
                     <th style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>상태</th>
                     <th style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>상세</th>
                   </tr>
@@ -588,6 +621,13 @@ export default function AdminPage() {
                         </td>
                         <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{sub.contacts?.[0]?.phone || sub.contact_phone || '-'}</td>
                         <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '12px', whiteSpace: 'nowrap' }}>{sub.case_number}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          {sub.newsletter_consent ? (
+                            <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '12px', color: '#1a5fb4', background: '#e8f0fe' }}>O</span>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: '#999' }}>-</span>
+                          )}
+                        </td>
                         <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                           <span style={{
                             fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px',

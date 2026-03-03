@@ -16,12 +16,36 @@ export function getDb(): SqlJsDatabase {
   return db;
 }
 
-/** DB를 디스크에 저장 */
+/** DB를 디스크에 저장 (atomic write: 임시파일 → rename) */
 export function saveDb(): void {
   if (!db) return;
   const data = db.export();
   const buffer = Buffer.from(data);
-  fs.writeFileSync(env.dbPath, buffer);
+
+  const tmpPath = env.dbPath + '.tmp';
+  try {
+    fs.writeFileSync(tmpPath, buffer);
+    fs.renameSync(tmpPath, env.dbPath);
+  } catch (err) {
+    // rename 실패 시 직접 덮어쓰기
+    try {
+      fs.writeFileSync(env.dbPath, buffer);
+    } catch (writeErr) {
+      console.error('DB 저장 실패:', writeErr);
+    }
+    // 임시파일 정리
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+  }
+}
+
+/** 서버 종료 시 DB 안전하게 저장하고 타이머 정리 */
+export function shutdownDb(): void {
+  if (saveTimer) {
+    clearInterval(saveTimer);
+    saveTimer = null;
+  }
+  saveDb();
+  console.log('DB 안전하게 저장 완료');
 }
 
 export async function initDatabase(): Promise<void> {
