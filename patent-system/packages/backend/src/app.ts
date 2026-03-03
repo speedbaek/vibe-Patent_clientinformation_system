@@ -33,7 +33,7 @@ app.use('/api/additional', additionalRoutes);
 
 // ── 프로덕션: 프론트엔드 정적 파일 서빙 ──
 if (!env.isDev) {
-  const frontendDist = path.resolve(__dirname, '../../../frontend/dist');
+  const frontendDist = path.resolve(__dirname, '../../frontend/dist');
   app.use(express.static(frontendDist));
 
   // SPA 폴백: API 외 모든 경로 → index.html
