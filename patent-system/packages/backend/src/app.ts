@@ -17,11 +17,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://t1.daumcdn.net"],
+      scriptSrc: ["'self'", "https://t1.daumcdn.net", "https://postcode.map.daum.net"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      frameSrc: ["'self'", "https://t1.daumcdn.net"],
-      connectSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "blob:", "https://*.daumcdn.net"],
+      frameSrc: ["'self'", "https://t1.daumcdn.net", "https://postcode.map.daum.net"],
+      connectSrc: ["'self'", "https://postcode.map.daum.net"],
+      childSrc: ["'self'", "https://postcode.map.daum.net"],
     },
   },
 }));
