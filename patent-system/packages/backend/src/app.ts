@@ -25,6 +25,9 @@ app.use(helmet({
       childSrc: ["'self'", "https://postcode.map.daum.net"],
     },
   },
+  // 다음 주소검색 팝업이 opener 페이지와 통신할 수 있도록 완화
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false,
 }));
 app.use(cors({
   origin: env.frontendUrl,
