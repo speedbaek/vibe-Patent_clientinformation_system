@@ -657,9 +657,9 @@ label:has(input[type="checkbox"]) {
     height: 30px;
   }
 
-  /* 레이아웃 */
+  /* 레이아웃 — 푸터가 fixed가 아니므로 하단 패딩 축소 */
   .form-container {
-    padding: 12px 10px 100px;
+    padding: 12px 10px 24px;
   }
   .form-header {
     padding: 16px 0 12px;
@@ -1055,24 +1055,26 @@ label:has(input[type="checkbox"]) {
   text-decoration: underline;
 }
 
-/* 모바일 푸터 */
+/* 모바일 푸터 — fixed 해제, 자연 흐름 배치 */
 @media (max-width: 520px) {
   .app-footer {
-    padding: 14px 14px;
-    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    position: relative;
+    padding: 16px 14px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
   .footer-inner {
     flex-direction: column;
-    gap: 20px;
+    gap: 10px;
+    text-align: center;
   }
   .footer-right {
-    text-align: left;
+    text-align: center;
   }
   .footer-seal-wrap {
-    justify-content: flex-start;
+    justify-content: center;
   }
   .footer-catchphrase span {
-    font-size: 20px;
+    font-size: 18px;
   }
   .footer-info {
     font-size: 10px;
