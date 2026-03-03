@@ -11,6 +11,7 @@
     "dev:backend": "cd packages/backend && npm run dev",
     "dev:frontend": "cd packages/frontend && npm run dev",
     "build": "cd packages/backend && npm run build && cd ../frontend && npm run build",
+    "start": "node packages/backend/dist/server.js",
     "install:all": "npm install"
   },
   "devDependencies": {

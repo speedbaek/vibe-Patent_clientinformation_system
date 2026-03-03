@@ -52,8 +52,8 @@ export const env = {
   maxTotalSize: parseInt(process.env.MAX_TOTAL_SIZE || '52428800', 10),
   uploadDir: process.env.UPLOAD_DIR || path.resolve(__dirname, '../../uploads'),
 
-  // CORS
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  // CORS (프로덕션에서 미설정 시 같은 origin 사용)
+  frontendUrl: process.env.FRONTEND_URL || (isDev ? 'http://localhost:5173' : '*'),
 
   // Admin
   adminPassword: adminPassword || 'admin1234',
