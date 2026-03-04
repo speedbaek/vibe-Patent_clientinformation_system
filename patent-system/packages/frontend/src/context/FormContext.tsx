@@ -205,22 +205,23 @@ function formReducer(state: FormState, action: FormAction): FormState {
       };
 
     case 'COPY_APPLICANTS_TO_INVENTORS': {
+      if (state.applicants.length === 0) return state;
+
       const individualTypes = ['domestic_individual', 'foreign_individual'];
-      const individuals = state.applicants.filter((a) =>
-        individualTypes.includes(a.personType)
-      );
 
-      if (individuals.length === 0) return state;
-
-      const newInventors = individuals.map((a) => ({
-        ...createEmptyInventor(`inv-copy-${a.id}`),
-        nameKr: a.nameKr,
-        nameEn: a.nameEn,
-        rrn: a.rrn,
-        address: { ...a.address },
-        mailAddress: { ...a.mailAddress },
-        useMailAddress: a.useMailAddress,
-      }));
+      const newInventors = state.applicants.map((a) => {
+        const isIndividual = individualTypes.includes(a.personType);
+        return {
+          ...createEmptyInventor(`inv-copy-${a.id}`),
+          // 개인: 성명 그대로, 법인: 대표자명 또는 법인명 사용
+          nameKr: isIndividual ? a.nameKr : (a.ceoName || a.corpName || a.nameKr),
+          nameEn: a.nameEn,
+          rrn: isIndividual ? a.rrn : '',
+          address: { ...a.address },
+          mailAddress: { ...a.mailAddress },
+          useMailAddress: a.useMailAddress,
+        };
+      });
 
       return { ...state, inventors: newInventors };
     }
